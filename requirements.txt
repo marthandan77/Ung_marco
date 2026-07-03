@@ -1,0 +1,8 @@
+pandas>=2.1,<4
+numpy>=1.26,<3
+streamlit>=1.38,<2
+yfinance>=0.2.40,<2
+requests>=2.32,<3
+scipy>=1.12,<2
+scikit-learn>=1.4,<2
+hmmlearn==0.3.3
