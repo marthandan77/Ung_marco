@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.streamlit/secrets.toml
+data/
+artifacts/
+ung_execution_ledger.csv
+ung_intraday_bars.csv
+ung_intraday_scorecard.csv
+ung_intraday_scorecard_summary.csv
+ung_scorecard.csv
+ung_scorecard_summary.csv
+*.parquet
+*.pkl
+*.joblib
