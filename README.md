@@ -7,11 +7,11 @@ Main rule: **no setup is better than a weak setup**.
 ## Features
 
 - Streamlit dashboard with five pages: Live Advisor, Chart Scanner, News/Macro, Parameter Control, and Signal Log.
-- No-key market data path using `yfinance` with `XAUUSD=X` and `GC=F` fallback.
-- Macro proxies using DXY and US 10Y yield where available.
-- Indicators: EMA, VWAP, ATR, RSI, ADX, swing levels, 7-day range, previous-day range, and session ranges.
+- Version 1 opens reliably with generated sample OHLC data.
+- CSV upload is available for real OHLC data with `open`, `high`, `low`, and `close` columns.
+- Indicators: EMA, VWAP, ATR, RSI, ADX, swing levels, 7-day range, and support/resistance mapping.
 - Manual parameter tuning with Conservative, Balanced Strict, and Aggressive presets.
-- SQLite signal log.
+- Strict rejection filters for weak setups.
 - No broker execution and no automatic parameter tuning.
 
 ## Run
@@ -32,6 +32,6 @@ Data quality check
 -> final advisory output
 ```
 
-## Notes
+## Next data step
 
-The first version uses free/simple data sources so it can run quickly from GitHub and Streamlit. Paid market data and calendar APIs can be added later through Streamlit secrets.
+The repository includes `yfinance` in `requirements.txt`, but the current root app uses sample/CSV data first for reliability. The next Codex task should add live `XAUUSD=X`/`GC=F` provider loading behind a toggle, then keep CSV as fallback.
