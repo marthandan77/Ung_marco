@@ -3,41 +3,15 @@ name: Streamlit Smoke
 on:
   push:
   pull_request:
-  workflow_dispatch:
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-
-      - name: Verify compiled dependencies
-        run: |
-          python -c "import hmmlearn, scipy, sklearn, streamlit; print('compiled deps ok')"
-
-      - name: Compile Python files
-        run: |
-          python -m py_compile ung_long_only_strategy.py streamlit_app.py
-
-      - name: Start Streamlit app
-        env:
-          MARKET_DATA_PROVIDER: "yfinance"
-          NEWS_PROVIDER: "none"
-          HMM_CACHE_ENABLED: "true"
-        run: |
-          streamlit run streamlit_app.py --server.headless true --server.port 8501 &
-          sleep 12
-          curl --fail http://localhost:8501/_stcore/health
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m py_compile app.py
+      - run: pytest -q
