@@ -1,137 +1,16 @@
-name: Nightly Forecast Artifacts
+name: Manual Check
 
 on:
   workflow_dispatch:
-    inputs:
-      profile:
-        description: "ETF profile to run"
-        required: true
-        default: "UNG"
-      start_date:
-        description: "Daily forecast/backfill start date"
-        required: true
-        default: "2024-02-01"
-      end_date:
-        description: "Optional end date YYYY-MM-DD"
-        required: false
-        default: ""
-      options_backfill_limit:
-        description: "Recent dates to attempt for Alpaca option backfill"
-        required: true
-        default: "20"
-      run_backfills:
-        description: "Run EIA and Alpaca option backfills before forecast"
-        required: true
-        default: "true"
-  schedule:
-    - cron: "30 22 * * 1-5"
 
 jobs:
-  forecast:
+  check:
     runs-on: ubuntu-latest
-
-    env:
-      PROFILE: ${{ github.event.inputs.profile }}
-      START_DATE: ${{ github.event.inputs.start_date }}
-      END_DATE: ${{ github.event.inputs.end_date }}
-      OPTIONS_BACKFILL_LIMIT: ${{ github.event.inputs.options_backfill_limit }}
-      RUN_BACKFILLS: ${{ github.event.inputs.run_backfills }}
-      MARKET_DATA_PROVIDER: "auto"
-      NEWS_PROVIDER: "auto"
-      YFINANCE_CACHE_DIR: "data/yfinance_cache"
-      HMM_CACHE_ENABLED: "true"
-      HMM_CACHE_DIR: "data/hmm_signal_cache"
-      ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
-      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
-      ALPACA_STOCK_FEED: ${{ secrets.ALPACA_STOCK_FEED }}
-      ALPACA_TRADING_BASE_URL: ${{ secrets.ALPACA_TRADING_BASE_URL }}
-      EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
-      EIA_STORAGE_SERIES_ID: ${{ secrets.EIA_STORAGE_SERIES_ID }}
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Normalize runtime settings
-        run: |
-          echo "PROFILE=${PROFILE:-UNG}" >> "$GITHUB_ENV"
-          echo "START_DATE=${START_DATE:-2024-02-01}" >> "$GITHUB_ENV"
-          echo "OPTIONS_BACKFILL_LIMIT=${OPTIONS_BACKFILL_LIMIT:-20}" >> "$GITHUB_ENV"
-          echo "RUN_BACKFILLS=${RUN_BACKFILLS:-true}" >> "$GITHUB_ENV"
-          echo "ALPACA_STOCK_FEED=${ALPACA_STOCK_FEED:-iex}" >> "$GITHUB_ENV"
-          echo "ALPACA_TRADING_BASE_URL=${ALPACA_TRADING_BASE_URL:-https://paper-api.alpaca.markets}" >> "$GITHUB_ENV"
-          echo "EIA_STORAGE_SERIES_ID=${EIA_STORAGE_SERIES_ID:-NG.NW2_EPG0_SWO_R48_BCF.W}" >> "$GITHUB_ENV"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-
-      - name: Verify dependency imports
-        run: |
-          python -c "import hmmlearn, scipy, sklearn, streamlit; print('runtime deps ok')"
-          python -m py_compile ung_long_only_strategy.py streamlit_app.py
-
-      - name: Preflight
-        run: |
-          python ung_long_only_strategy.py --profile "$PROFILE" --check-feeds
-
-      - name: Create artifact directory
-        run: |
-          mkdir -p artifacts
-
-      - name: Backfill EIA news cache
-        if: env.RUN_BACKFILLS == 'true'
-        run: |
-          if [ -z "$EIA_API_KEY" ]; then
-            echo "::warning::EIA_API_KEY is missing; skipping EIA news backfill."
-          else
-            args=(--profile "$PROFILE" --start "$START_DATE" --backfill-news --backfill-news-provider eia --backfill-only)
-            if [ -n "$END_DATE" ]; then
-              args+=(--end "$END_DATE")
-            fi
-            python ung_long_only_strategy.py "${args[@]}"
-          fi
-
-      - name: Backfill Alpaca option snapshots
-        if: env.RUN_BACKFILLS == 'true'
-        run: |
-          if [ -z "$ALPACA_API_KEY_ID" ] || [ -z "$ALPACA_SECRET_KEY" ]; then
-            echo "::warning::Alpaca credentials are missing; skipping option backfill."
-          else
-            args=(--profile "$PROFILE" --start "$START_DATE" --backfill-options --options-backfill-limit "$OPTIONS_BACKFILL_LIMIT" --backfill-only)
-            if [ -n "$END_DATE" ]; then
-              args+=(--end "$END_DATE")
-            fi
-            python ung_long_only_strategy.py "${args[@]}"
-          fi
-
-      - name: Run daily forecast
-        run: |
-          args=(--profile "$PROFILE" --start "$START_DATE" --tail 20 --csv artifacts/execution_ledger.csv --scorecard-csv artifacts/scorecard.csv --scorecard-summary-csv artifacts/scorecard_summary.csv)
-          if [ -n "$END_DATE" ]; then
-            args+=(--end "$END_DATE")
-          fi
-          python ung_long_only_strategy.py "${args[@]}" | tee artifacts/forecast_output.txt
-
-      - name: Copy runtime caches
-        if: always()
-        run: |
-          mkdir -p artifacts/data
-          if [ -d data ]; then
-            cp -R data artifacts/data/runtime_data
-          fi
-
-      - name: Upload forecast artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: forecast-artifacts-${{ github.run_number }}
-          path: artifacts
-          retention-days: 30
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m py_compile app.py
+      - run: pytest -q
